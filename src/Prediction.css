@@ -1,87 +1,40 @@
-/* Ensure the entire page scrolls, not individual sections */
 .prediction-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
 }
 
-/* Adjust selection container to prevent extra scrollbars */
-.selection-container {
-    background-color: #f0f0f0;
-    padding: 16px;
-    border-radius: 8px;
-    margin-top: 120px; /* Ensures it starts below the Header */
+.header {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    width: calc(100% - 32px); /* Prevents overflow */
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 10px;
-}
-
-.selection-heading {
-    padding-bottom: 10px;
-}
-
-/* Grid layout for stations */
-.stations-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    width: 100%;
-}
-
-.station-item {
-    background-color: white;
-    padding: 10px 16px;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    font-size: 14px;
-    font-weight: 500;
-    text-align: center;
-    min-width: 100px;
-}
-
-/* Ensure the model selection and button take full width */
-.model-selection {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    width: 100%;
-    margin-top: 12px;
-    flex-wrap: wrap;
-}
-
-.model-dropdown {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    flex: 1;
-    max-width: 300px;
-}
-
-.predict-button {
-    background-color: #007bff;
+    justify-content: space-between;
+    background-color: #003366;
     color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.3s;
+    padding: 10px 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.main-content {
+    display: flex;
     flex: 1;
-    max-width: 300px;
-}
+    position: relative;
+    margin-top: 120px; /* Space for header and location selector */
+  }
 
-.predict-button:hover {
-    background-color: #0056b3;
+.map-container {
+    flex: 1;
+    margin-left: 0; /* Default full width */
+    transition: margin-right 0.3s ease;
 }
-
-/* Ensure the map container does not have its own scrollbar */
-.content {
-    flex-grow: 1;
-    min-height: 700px;
-    overflow: hidden; /* Prevents extra scrollbar */
+  
+.map-container iframe {
+    width: 100%;
+    height: calc(100vh - 120px); /* Adjust for header and location selector height */
+    border: none;
+    margin-top: 40px;
+    border-radius: 10px;
 }

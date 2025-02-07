@@ -1,3 +1,5 @@
+@import url("https://unpkg.com/leaflet@1.7.1/dist/leaflet.css");
+
 .map-container {
     flex: 1;
     transition: margin-right 0.3s ease;

@@ -1,76 +1,99 @@
-"use client"
+import { useState, useEffect } from "react";
+import { GoogleMap, Marker, Polyline, useLoadScript } from "@react-google-maps/api";
+import TopologyConstants from "../constants/TopologyConstants"; // ✅ Fixed Import
 
-import { useEffect, useRef, useState } from "react"
-import PropTypes from "prop-types"
-import L from "leaflet"
-import "../styles/PredictionMap.css"
-import { AWSLocations } from "../data/location"
+const PredictionMap = ({ selectedStations }) => {
+  const { isLoaded } = useLoadScript({ googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY" });
 
-const PredictionMapContainer = ({ selectedStations }) => {
-  const mapRef = useRef(null)
-  const [map, setMap] = useState(null)
-  const [markers, setMarkers] = useState({})
+  const [selectedTopology, setSelectedTopology] = useState(null);
+  const [radius, setRadius] = useState(0);
+  const [elevation, setElevation] = useState(0);
+  const [filteredStations, setFilteredStations] = useState([]);
+  const [lines, setLines] = useState([]);
 
+  // Function to calculate the distance between two points (Haversine Formula)
+  const getDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371; // Radius of Earth in km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+  };
+
+  // Handle filtering locations based on user input
   useEffect(() => {
-    if (!mapRef.current) return
+    if (!selectedTopology || radius <= 0) return;
 
-    const leafletMap = L.map(mapRef.current).setView([18.5204, 73.8567], 10)
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(leafletMap)
+    console.log("Selected Topology:", selectedTopology);
+    console.log("Radius:", radius);
+    console.log("Elevation:", elevation);
 
-    setMap(leafletMap)
+    const filtered = Object.entries(AWSLocations).filter(([name, data]) => {
+      return data.elevation >= elevation;
+    });
 
-    return () => leafletMap.remove()
-  }, [])
+    console.log("Filtered Stations:", filtered.map(([name]) => name));
 
-  const createIcon = (color) =>
-    new L.DivIcon({
-      html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="25" height="41" fill="${color}">
-               <path d="M12 2C8.13 2 5 5.13 5 9c0 4.87 7 13 7 13s7-8.13 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/>
-             </svg>`,
-      className: "custom-icon",
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-    })
+    setFilteredStations(filtered.map(([name, data]) => ({ name, ...data })));
+  }, [selectedTopology, radius, elevation]);
 
+  // Generate polyline connections
   useEffect(() => {
-    if (!map) return
+    if (filteredStations.length < 2) return;
 
-    // Remove all existing markers
-    Object.values(markers).forEach((marker) => map.removeLayer(marker))
+    const newLines = [];
+    for (let i = 0; i < filteredStations.length - 1; i++) {
+      for (let j = i + 1; j < filteredStations.length; j++) {
+        if (getDistance(filteredStations[i].lat, filteredStations[i].lng, filteredStations[j].lat, filteredStations[j].lng) <= radius) {
+          newLines.push([
+            { lat: filteredStations[i].lat, lng: filteredStations[i].lng },
+            { lat: filteredStations[j].lat, lng: filteredStations[j].lng }
+          ]);
+        }
+      }
+    }
 
-    const newMarkers = {}
+    console.log("Generated Lines:", newLines);
+    setLines(newLines);
+  }, [filteredStations, radius]);
 
-    selectedStations.forEach((stationName) => {
-      const stationData = AWSLocations[stationName]
-      if (!stationData) return
+  if (!isLoaded) return <div>Loading Map...</div>;
 
-      const marker = L.marker([stationData.lat, stationData.lng], {
-        icon: createIcon("green"),
-      }).addTo(map)
+  return (
+    <div className="map-container">
+      <div className="controls">
+        <label>Radius (km):</label>
+        <input type="number" value={radius} onChange={(e) => setRadius(Number(e.target.value))} />
+        
+        <label>Elevation (m):</label>
+        <input type="number" value={elevation} onChange={(e) => setElevation(Number(e.target.value))} />
 
-      marker.bindTooltip(stationName, {
-        permanent: false,
-        direction: "top",
-        opacity: 0.9,
-        offset: [0, -40],
-      })
-      
-      marker.bindPopup(stationName)
+        <label>Topology:</label>
+        <select onChange={(e) => setSelectedTopology(e.target.value)} value={selectedTopology || ""}>
+          <option value="">Select Topology</option>
+          {Object.values(TopologyConstants).map((topology) => (
+            <option key={topology} value={topology}>{topology}</option>
+          ))}
+        </select>
+      </div>
 
-      newMarkers[stationName] = marker
-    })
+      <GoogleMap mapContainerStyle={mapContainerStyle} center={center} zoom={10}>
+        {filteredStations.map((station, index) => (
+          <Marker key={index} position={{ lat: station.lat, lng: station.lng }} label={station.name} />
+        ))}
 
-    setMarkers(newMarkers)
-  }, [map, selectedStations])
+        {lines.map((path, index) => (
+          <Polyline key={index} path={path} options={{ strokeColor: "#FF0000", strokeWeight: 2 }} />
+        ))}
+      </GoogleMap>
+    </div>
+  );
+};
 
-  return <div className="map-cont" ref={mapRef} style={{ width: "100%", height: "100%" }}></div>
-}
-
-PredictionMapContainer.propTypes = {
-  selectedStations: PropTypes.arrayOf(PropTypes.string).isRequired,
-}
-
-export default PredictionMapContainer
+export default PredictionMap;

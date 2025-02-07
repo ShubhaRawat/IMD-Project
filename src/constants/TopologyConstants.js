@@ -1,4 +1,4 @@
-export const TopologyTypes = {
+const TopologyConstants = {
     LINEAR: "Linear",
     TRIANGULAR: "Triangular",
     RING: "Ring",
@@ -6,4 +6,6 @@ export const TopologyTypes = {
     MESH: "Mesh",
     TREE: "Tree",
     HYBRID: "Hybrid",
-}
+};
+
+export default TopologyConstants;
